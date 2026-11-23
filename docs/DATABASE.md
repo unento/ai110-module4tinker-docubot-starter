@@ -1,4 +1,4 @@
-# Database Guide
++# Database Guide
 
 This document describes the database layer used in the sample application. It covers connection details, table structures, and common query patterns that appear throughout the codebase.
 

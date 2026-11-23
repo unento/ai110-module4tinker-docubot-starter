@@ -15,9 +15,11 @@ Experiment with:
 import os
 from google import genai
 
+from docubot import REFUSAL_MESSAGE
+
 # Central place to update the model name if needed.
 # You can swap this for a different Gemini model in the future.
-GEMINI_MODEL_NAME = "gemini-flash-lite-latest"
+GEMINI_MODEL_NAME = "gemini-3.5-flash-lite"
 
 
 class GeminiClient:
@@ -78,7 +80,7 @@ class GeminiClient:
         """
 
         if not snippets:
-            return "I do not know based on the docs I have."
+            return REFUSAL_MESSAGE
 
         context_blocks = []
         for filename, text in snippets:
@@ -107,8 +109,9 @@ Developer question:
 Rules:
 - Use only the information in the snippets. Do not invent new functions,
   endpoints, or configuration values.
-- If the snippets are not enough to answer confidently, reply exactly:
-  "I do not know based on the docs I have."
+- If the snippets are not enough to answer confidently, or the question asks
+  about something the snippets don't cover, reply exactly:
+  "{REFUSAL_MESSAGE}"
 - When you do answer, briefly mention which files you relied on.
 """
 
@@ -117,6 +120,12 @@ Rules:
                 model=GEMINI_MODEL_NAME,
                 contents=prompt
             )
-            return (response.text or "").strip()
+            answer = (response.text or "").strip()
         except Exception as e:
             return f"API error — could not generate answer. ({type(e).__name__}: {e})"
+
+        # Guardrail layer 3: standardize refusals. The model may wrap the refusal
+        # in quotes or add extra words after it; return the exact message instead.
+        if answer.strip('"\' ').lower().startswith(REFUSAL_MESSAGE.lower().rstrip(".")):
+            return REFUSAL_MESSAGE
+        return answer
